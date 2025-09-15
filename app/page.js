@@ -1,95 +1,154 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+"use client";
+import React, { useState, useEffect } from "react";
 
-export default function Home() {
+
+import {  AppBar,  Toolbar,  Typography,  Button,  Chip,  Stack,  Container,  Card,  CardContent,
+  TextField,  Box,  IconButton,  Divider,} from "@mui/material";
+
+
+import MenuIcon from "@mui/icons-material/Menu";
+import { initializeConnector } from "@web3-react/core";
+import { MetaMask } from "@web3-react/metamask";
+
+
+import { ethers } from "ethers";
+import { formatEther, parseUnits } from "@ethersproject/units";
+import abi from "./abi.json";
+
+
+const [metaMask, hooks] = initializeConnector(
+  actions => new MetaMask({ actions })
+);
+const { useChainId, useAccounts, useIsActive, useProvider } = hooks;
+const contractChain = 11155111;
+const contractAddress = "0xF2C94A19aF2F02338dF3bdbbed29E232364ddd03";
+
+
+const getAddressTxt = (str, s = 6, e = 6) => {
+  if (str) {
+    return `${str.slice(0, s)}...${str.slice(str.length - e)}`;
+  }
+  return "";
+};
+
+
+export default function Page() {
+  const chainId = useChainId();
+  const accounts = useAccounts();
+  const isActive = useIsActive();
+  const provider = useProvider();
+
+
+  const [balance, setBalance] = useState("");
+  useEffect(() => {
+    const fetchBalance = async () => {
+      const signer = provider.getSigner();
+      const smartContract = new ethers.Contract(contractAddress, abi, signer);
+      const myBalance = await smartContract.balanceOf(accounts[0]);
+      console.log(formatEther(myBalance));
+      setBalance(formatEther(myBalance));
+    };
+    if (isActive) {
+      fetchBalance();
+    }
+  }, [isActive]);
+
+
+  const [ETHValue, setETHValue] = useState(0);
+  const handleBuy = async () => {
+    if (ETHValue <= 0) {
+      return;
+    }
+
+
+    const signer = provider.getSigner();
+    const smartContract = new ethers.Contract(contractAddress, abi, signer);
+    const weiValue = parseUnits(ETHValue.toString(), "ether");
+    const tx = await smartContract.buy({
+      value: weiValue.toString(),
+    });
+    console.log("Transaction hash:", tx.hash);
+  };
+
+
+  useEffect(() => {
+    void metaMask.connectEagerly().catch(() => {
+      console.debug("Failed to connect eagerly to metamask");
+    });
+  }, []);
+
+
+  const handleConnect = () => {
+    metaMask.activate(contractChain);
+  };
+
+
+  const handleDisconnect = () => {
+    metaMask.resetState();
+  };
+
+
   return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol>
-          <li>
-            Get started by editing <code>app/page.js</code>.
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
-
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.secondary}
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className={styles.footer}>
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+    <div>
+      <Box sx={{ flexGrow: 1 }}>
+        <AppBar position="static">
+          <Toolbar>
+            <IconButton
+              size="large"
+              edge="start"
+              color="inherit"
+              aria-label="menu"
+              sx={{ mr: 2 }}
+            >
+              <MenuIcon />
+            </IconButton>
+            <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+              My Token App
+            </Typography>
+            {!isActive ? (
+              <>
+                <Button color="inherit" onClick={handleConnect}>
+                  Connect
+                </Button>
+              </>
+            ) : (
+              <>
+                <Stack direction="row" spacing={1}>
+                  <Chip label={getAddressTxt(accounts[0])} variant="outlined" />
+                  <Button color="inherit" onClick={handleDisconnect}>
+                    Disconnect
+                  </Button>
+                </Stack>
+              </>
+            )}
+          </Toolbar>
+        </AppBar>
+      </Box>
+      <Container maxWidth="sm" sx={{ mt: 2 }}>
+        {isActive ? (
+          <>
+            <Card>
+              <CardContent>
+                <Stack spacing={2}>
+                  <Typography>UDS</Typography>
+                  <TextField label="Address" value={accounts[0]} />
+                  <TextField label="UDS Balance" value={balance} />
+                  <Divider />
+                  <Typography>Buy UDS (1 ETH = 10 UDS)</Typography>
+                  <TextField
+                    label="ETH"
+                    type="number"
+                    onChange={e => setETHValue(e.target.value)}
+                  />
+                  <Button variant="contained" onClick={handleBuy}>
+                    Buy
+                  </Button>
+                </Stack>
+              </CardContent>
+            </Card>
+          </>
+        ) : null}
+      </Container>
     </div>
   );
 }
