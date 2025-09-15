@@ -21,7 +21,7 @@ const [metaMask, hooks] = initializeConnector(
 );
 const { useChainId, useAccounts, useIsActive, useProvider } = hooks;
 const contractChain = 11155111;
-const contractAddress = "0xF2C94A19aF2F02338dF3bdbbed29E232364ddd03";
+const contractAddress = "0xaa1f6ED98025af3d00864f0af2DD8f5EC64693a7";
 
 
 const getAddressTxt = (str, s = 6, e = 6) => {
